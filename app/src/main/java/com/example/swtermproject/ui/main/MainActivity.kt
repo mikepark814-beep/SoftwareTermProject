@@ -2,12 +2,14 @@ package com.example.swtermproject.ui.main
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.example.swtermproject.R
 import com.example.swtermproject.databinding.ActivityMainBinding
 import com.example.swtermproject.ui.camera.CameraActivity
@@ -30,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val REQUEST_CAMERA = 1001
+        private const val TAB_INDEX_TRANSLATE = 3
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,9 +95,23 @@ class MainActivity : AppCompatActivity() {
             tab.setIcon(tabIcons[pos])
             tab.setText(tabLabels[pos])
         }.attach()
+
+        // Sync FAB visibility with tab selection
+        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                binding.fabCamera.visibility = if (position == TAB_INDEX_TRANSLATE) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+            }
+        })
     }
 
     private fun setupFab() {
+        // Initial visibility
+        binding.fabCamera.visibility = View.GONE
+
         binding.fabCamera.setOnClickListener {
             val intent = Intent(this, CameraActivity::class.java).apply {
                 putExtra(Constants.EXTRA_LANGUAGE_CODE, currentLanguage)

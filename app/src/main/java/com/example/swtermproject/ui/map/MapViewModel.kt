@@ -39,6 +39,11 @@ class MapViewModel : ViewModel() {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _radius = MutableLiveData(1500.0) // Radius in meters
+    val radius: LiveData<Double> = _radius
+
+    private var currentCategory: String? = null
+
     private val placeFields = listOf(
         Place.Field.ID,
         Place.Field.NAME,
@@ -60,7 +65,7 @@ class MapViewModel : ViewModel() {
             .addOnSuccessListener { location ->
                 if (location != null) {
                     _currentLocation.value = LatLng(location.latitude, location.longitude)
-                    searchNearby(context, "hospital")
+                    // No default search here, wait for category selection
                 } else {
                     requestSingleLocationUpdate(context, priority)
                 }
@@ -82,14 +87,21 @@ class MapViewModel : ViewModel() {
                 fusedClient.removeLocationUpdates(this)
                 val location = result.lastLocation ?: return
                 _currentLocation.value = LatLng(location.latitude, location.longitude)
-                searchNearby(context, "hospital")
             }
         }
         fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
     }
 
-    fun searchNearby(context: Context, placeType: String) {
+    fun setRadius(meters: Double) {
+        _radius.value = meters
+    }
+
+    fun searchNearby(context: Context, placeType: String? = null) {
+        val typeToSearch = placeType ?: currentCategory ?: return
+        currentCategory = typeToSearch
+        
         val currentLatLng = _currentLocation.value ?: return
+        val currentRadius = _radius.value ?: 1500.0
 
         if (!Places.isInitialized()) {
             if (BuildConfig.MAPS_API_KEY.isBlank()) {
@@ -104,12 +116,14 @@ class MapViewModel : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                val circle = CircularBounds.newInstance(currentLatLng, 1500.0)
-                val request = SearchNearbyRequest.builder(circle, placeFields)
-                    .setIncludedTypes(listOf(placeType))
-                    .setMaxResultCount(10)
-                    .build()
+                val circle = CircularBounds.newInstance(currentLatLng, currentRadius)
+                val requestBuilder = SearchNearbyRequest.builder(circle, placeFields)
+                    .setIncludedTypes(listOf(typeToSearch))
+                
+                // Removed maxResultCount(10) to get more results as requested
+                // Note: The API still has its own internal limits but we won't artificially cap it to 10 anymore.
 
+                val request = requestBuilder.build()
                 val response = placesClient.searchNearby(request).await()
                 _places.value = response.places.mapNotNull { place ->
                     val latLng = place.latLng ?: return@mapNotNull null
@@ -120,11 +134,11 @@ class MapViewModel : ViewModel() {
                         lat = latLng.latitude,
                         lng = latLng.longitude,
                         rating = (place.rating ?: 0.0).toFloat(),
-                        category = placeType
+                        category = typeToSearch
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "searchNearby failed for $placeType", e)
+                Log.e(TAG, "searchNearby failed for $typeToSearch", e)
                 _places.value = emptyList()
             } finally {
                 _isLoading.value = false

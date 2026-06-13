@@ -3,6 +3,7 @@ package com.example.swtermproject.ui.map
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -20,8 +21,12 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.Circle
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.slider.Slider
+import java.util.Locale
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
@@ -30,6 +35,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     private lateinit var viewModel: MapViewModel
     private lateinit var placeAdapter: PlaceAdapter
     private var googleMap: GoogleMap? = null
+    private var searchCircle: Circle? = null
 
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -56,6 +62,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         setupRecyclerView()
         setupCategoryChips()
+        setupRadiusSlider()
+        setupToggleButtons()
+        
         binding.btnPlaceTypes.setOnClickListener {
             val sheet = PlaceTypeBottomSheet()
             sheet.onTypeSelected = { type ->
@@ -80,6 +89,65 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                 ?.let { navigateToDetail(it) }
             true
         }
+        updateSearchCircle()
+    }
+
+    private fun setupRadiusSlider() {
+        binding.sliderRadius.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val radiusInMeters = value.toDouble() * 1000.0
+                binding.tvRadius.text = String.format(Locale.getDefault(), "Radius: %.1f km", value)
+                viewModel.setRadius(radiusInMeters)
+                updateSearchCircle()
+            }
+        }
+
+        binding.sliderRadius.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {}
+
+            override fun onStopTrackingTouch(slider: Slider) {
+                // Perform search only when user stops sliding to save API quota
+                viewModel.searchNearby(requireContext())
+            }
+        })
+    }
+
+    private fun setupToggleButtons() {
+        binding.btnToggleChips.setOnClickListener {
+            if (binding.chipGroupScroll.visibility == View.VISIBLE) {
+                binding.chipGroupScroll.visibility = View.GONE
+                binding.btnToggleChips.setImageResource(android.R.drawable.arrow_down_float)
+            } else {
+                binding.chipGroupScroll.visibility = View.VISIBLE
+                binding.btnToggleChips.setImageResource(android.R.drawable.arrow_up_float)
+            }
+        }
+
+        binding.btnToggleList.setOnClickListener {
+            if (binding.rvPlaces.visibility == View.VISIBLE) {
+                binding.rvPlaces.visibility = View.GONE
+                binding.btnToggleList.setImageResource(android.R.drawable.arrow_up_float)
+            } else {
+                binding.rvPlaces.visibility = View.VISIBLE
+                binding.btnToggleList.setImageResource(android.R.drawable.arrow_down_float)
+            }
+        }
+    }
+
+    private fun updateSearchCircle() {
+        val center = viewModel.currentLocation.value ?: return
+        val radius = viewModel.radius.value ?: 1500.0
+        val map = googleMap ?: return
+
+        searchCircle?.remove()
+        searchCircle = map.addCircle(
+            CircleOptions()
+                .center(center)
+                .radius(radius)
+                .strokeWidth(2f)
+                .strokeColor(Color.BLUE)
+                .fillColor(Color.argb(30, 0, 0, 255))
+        )
     }
 
     private fun requestLocationOrLoad() {
@@ -135,11 +203,14 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private fun setupObservers() {
         viewModel.currentLocation.observe(viewLifecycleOwner) { latLng ->
-            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+            updateSearchCircle()
         }
 
         viewModel.places.observe(viewLifecycleOwner) { places ->
             googleMap?.clear()
+            // Redraw circle because clear() removes it
+            updateSearchCircle()
             places.forEach { place ->
                 googleMap?.addMarker(
                     MarkerOptions().position(LatLng(place.lat, place.lng)).title(place.name)

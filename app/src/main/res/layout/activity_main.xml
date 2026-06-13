@@ -6,41 +6,46 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Main content -->
-    <LinearLayout
+    <!-- Main content container -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
-        <com.google.android.material.appbar.AppBarLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-            <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
+            <com.google.android.material.appbar.AppBarLayout
                 android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@color/colorPrimary"
-                android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+                android:layout_height="wrap_content">
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
+                <androidx.appcompat.widget.Toolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    android:background="@color/colorPrimary"
+                    android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tabLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/colorPrimary"
+                    app:tabGravity="fill"
+                    app:tabIconTint="@color/white"
+                    app:tabMode="fixed"
+                    app:tabSelectedTextColor="@color/white"
+                    app:tabTextColor="#AAFFFFFF" />
+
+            </com.google.android.material.appbar.AppBarLayout>
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/viewPager"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorPrimary"
-                app:tabGravity="fill"
-                app:tabIconTint="@color/white"
-                app:tabMode="fixed"
-                app:tabSelectedTextColor="@color/white"
-                app:tabTextColor="#AAFFFFFF" />
+                android:layout_height="match_parent" />
 
-        </com.google.android.material.appbar.AppBarLayout>
-
-        <androidx.viewpager2.widget.ViewPager2
-            android:id="@+id/viewPager"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        </LinearLayout>
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabCamera"
@@ -49,10 +54,11 @@
             android:layout_gravity="end|bottom"
             android:layout_margin="16dp"
             android:src="@drawable/ic_camera"
+            android:visibility="gone"
             app:backgroundTint="@color/colorAccent"
             app:tint="@color/white" />
 
-    </LinearLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- Navigation drawer -->
     <com.google.android.material.navigation.NavigationView
